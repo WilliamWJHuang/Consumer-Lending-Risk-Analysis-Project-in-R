@@ -110,7 +110,7 @@ boxplot(d1ppcheck$OWN_CAR_AGE[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="OW
 ```{r}
 par(mfrow = c(1,2))
 boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:8000]~d1ppcheck$TARGET[1:8000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
-boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
+#boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
 
 ```
 
