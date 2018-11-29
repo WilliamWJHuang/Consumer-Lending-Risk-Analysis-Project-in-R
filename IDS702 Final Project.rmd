@@ -9,13 +9,16 @@ output: html_document
 Home Credit Group, founded in Czech Republic a d headquartered in Netherlands, is a multinational non-bank financial company that provides consumer financial products, such as personal lending and credit card businesses. The company focuses primarily on people with no or little credit history. The project objective is to interpret how the information on the laon applications could affect the default risks of loan applicants.
 
 ##Load Data and Data Pre-processing
+As the original dataset contains over 200 independent variables, I picked the 23 variables for further analysis and interpretations based on my interest and work experience in this industry.
+Besides, I also added the following 5 variables together to improve the interpretability of my model: AMT_REQ_CREDIT_BUREAU_DAY, AMT_REQ_CREDIT_BUREAU_WEEK, AMT_REQ_CREDIT_BUREAU_MON, AMT_REQ_CREDIT_BUREAU_QRT, AMT_REQ_CREDIT_BUREAU_YEAR. 
+These variables represent the number of enquiries to Credit Bureau about the client one day, week(excluding one day before), month(excluding one week before), quarter(excluding one month before) and year(excluding one quarter before) before application. As my goal is to construct a interpretation model, instead of a predictive model, it will enhance the interpretability of the model substantially by adding them together. On the other hand, if I intended to build a predictive model, I should keep them as 5 different variables.
 ```{r setup, include=FALSE}
 library(mice)
 library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-setwd("/Users/Macintosh/Kaggle-HomeCredit/HomeCredit-data")
+setwd("/Users/wh132/Downloads")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
@@ -24,39 +27,107 @@ application_data_selected <- subset(application_data, select = c("TARGET","CODE_
 
 #combine all the AMT_REQ_CREDIT_BUREAU variables together to compute the aggregated
 #number of enquiries to Credit Bureau about the client one year before the application
-application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM <- application_train_selected$AMT_REQ_CREDIT_BUREAU_DAY+application_train_selected$AMT_REQ_CREDIT_BUREAU_MON+application_train_selected$AMT_REQ_CREDIT_BUREAU_QRT+application_train_selected$AMT_REQ_CREDIT_BUREAU_WEEK+application_train_selected$AMT_REQ_CREDIT_BUREAU_YEAR
+application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- application_data_selected$AMT_REQ_CREDIT_BUREAU_DAY+application_data_selected$AMT_REQ_CREDIT_BUREAU_MON+application_data_selected$AMT_REQ_CREDIT_BUREAU_QRT+application_data_selected$AMT_REQ_CREDIT_BUREAU_WEEK+application_data_selected$AMT_REQ_CREDIT_BUREAU_YEAR
 
 #Drop AMT_REQ_CREDIT_BUREAU_DAY, WEEK, MON, QRT, YEAR
-application_train_selected <- application_train_selected %>%
-    select(-(AMT_REQ_CREDIT_BUREAU_DAY)) %>%
-    select(-(AMT_REQ_CREDIT_BUREAU_WEEK)) %>%
-    select(-(AMT_REQ_CREDIT_BUREAU_MON)) %>%
-    select(-(AMT_REQ_CREDIT_BUREAU_QRT)) %>%
-    select(-(AMT_REQ_CREDIT_BUREAU_YEAR))
+application_data_selected <- application_data_selected %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_DAY)) %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_WEEK)) %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_MON)) %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_QRT)) %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_YEAR))
 
-#factorize CNT_FAM_MEMBERS, AMR_REQ_CREDIT_BUREAU_SUM
-application_train_selected$CNT_FAM_MEMBERS <- as.factor(application_train_selected$CNT_FAM_MEMBERS)
-application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM)
 
 ```
 
-As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 6000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
 ```{r}
-set.seed(19)
-application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 6000), ]
+#check collinearity
+num <- unlist(lapply(application_data_selected, is.numeric))
+cor(cc(application_data_selected[,num]), use = "pair")
+```
+
+Based on the correlation table above, two pairs of independent variables have an extremely high correlation:
+(1) (AMT_CREDIT, AMT_GOODS_PRICE), corr = 0.987 
+AMT_GOODS_PRICE represents the goods price of good that client asked for on the previous application.
+AMT_CREDIT represents the final credit amount on the previous application.
+Through the definitions of these two variables, it's clear that we could drop one of the variables.
+
+(2) (CNT_FAM_MEMBERS, CNT_CHILDREN), corr = 0.914
+CNT_FAM_mEMBERS represents how many family members clients have
+CNT_CHILDREN represents how many children clients have
+Through the definitions of these two variables, it's clear that we could drop one of the variables.
+
+```{r}
+application_data_selected <- application_data_selected %>%
+    dplyr::select(-(AMT_GOODS_PRICE)) %>%
+    dplyr::select(-(CNT_CHILDREN))
+```
+
+```{r}
+#factorize CNT_FAM_MEMBERS, AMR_REQ_CREDIT_BUREAU_SUM
+application_data_selected$CNT_FAM_MEMBERS <- as.factor(application_data_selected$CNT_FAM_MEMBERS)
+application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM)
+```
+
+As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 8000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
+```{r}
+set.seed(8)
+application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 8000), ]
 summary(application_data_sam)
 ```
 
+###Missing values imputation
+IWN_CAR_AGE and AMR_REQ_CREDOT_BUREAU_SUM are the two columns that contain missing values in the dataset. I used the mice package to conduct missing value imputation to generate complete datasets. For the imputation method, I chose cart, instead of the default method. I have tried to use the default method to impute missing values; however, it returned the following error "system is computationally singular". The cause of the problem here could probably be the large number of unbalanced factor variables in the dataset. When these are turned intodummy variables there's a high probability that one colum is a linear combination of another. As the default imputation methods involve linear regression, this results in a X matrix that cannot be inverted. Therefore, we consider to change the imputation method that is not stochastic, which require no X matrix inversion. (Reference: )
+```{r echo = T, results = 'hide'}
+#check pattern
+md.pattern(application_data_sam)
+```
+```{r}
+application_MI <- mice(application_data_sam, m = 10, method = "cart", seed = 8)
+```
+##Imputation Model Diagnostics
+```{r}
+stripplot(application_MI, col=c("grey",mdc(2)),pch=c(1,20))
+stripplot(application_MI, OWN_CAR_AGE~TARGET, col=c("grey",mdc(2)),pch=c(1,20), xlab = 'TARGET', ylab = "OWN_CAR_AGE")
+stripplot(application_MI, AMR_REQ_CREDIT_BUREAU_SUM~TARGET, col=c("grey",mdc(2)),pch=c(1,20), xlab = 'TARGET', ylab = "AMT_REQ_CREDIT_BUREAU_DAY")
 
-
-
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+##Posterior Predictive Check on two complete datasets
+```{r}
+application_ppcheck <- rbind(application_data_sam, application_data_sam)
+application_ppcheck[8001:16000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
+application_ppcheck_MI <- mice(application_ppcheck, m = 10, method = "cart", seed = 8)
+d1ppcheck <- mice::complete(application_ppcheck_MI, 1)
+d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
+```
+```{r}
+#dataset1
+par(mfrow = c(1,2))
+boxplot(d1ppcheck$OWN_CAR_AGE[1:8000]~d1ppcheck$TARGET[1:8000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+boxplot(d1ppcheck$OWN_CAR_AGE[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+```
+```{r}
+par(mfrow = c(1,2))
+boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:8000]~d1ppcheck$TARGET[1:8000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
+boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
