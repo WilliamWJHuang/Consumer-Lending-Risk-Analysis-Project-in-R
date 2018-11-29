@@ -1,0 +1,62 @@
+---
+title: 'IDS702 Final Project: HomeCredit Default Risk Dataset'
+author: "William Huang"
+date: "November 28, 2018"
+output: html_document
+---
+
+###Project Objective
+Home Credit Group, founded in Czech Republic a d headquartered in Netherlands, is a multinational non-bank financial company that provides consumer financial products, such as personal lending and credit card businesses. The company focuses primarily on people with no or little credit history. The project objective is to interpret how the information on the laon applications could affect the default risks of loan applicants.
+
+##Load Data and Data Pre-processing
+```{r setup, include=FALSE}
+library(mice)
+library(dplyr)
+library(tidyverse)
+library(pROC)
+library(arm)
+setwd("/Users/Macintosh/Kaggle-HomeCredit/HomeCredit-data")
+application_data <- read.csv("application_train.csv")
+```
+```{r}
+#select interested variables
+application_data_selected <- subset(application_data, select = c("TARGET","CODE_GENDER","NAME_CONTRACT_TYPE","AMT_INCOME_TOTAL","FLAG_OWN_CAR","FLAG_OWN_REALTY","CNT_CHILDREN","AMT_CREDIT", "AMT_ANNUITY", "AMT_GOODS_PRICE", "NAME_TYPE_SUITE","NAME_INCOME_TYPE","NAME_EDUCATION_TYPE","NAME_FAMILY_STATUS","NAME_HOUSING_TYPE","REGION_POPULATION_RELATIVE","DAYS_BIRTH","DAYS_EMPLOYED","OWN_CAR_AGE","OCCUPATION_TYPE","CNT_FAM_MEMBERS","ORGANIZATION_TYPE","AMT_REQ_CREDIT_BUREAU_DAY","AMT_REQ_CREDIT_BUREAU_WEEK","AMT_REQ_CREDIT_BUREAU_MON","AMT_REQ_CREDIT_BUREAU_QRT","AMT_REQ_CREDIT_BUREAU_YEAR"))
+
+#combine all the AMT_REQ_CREDIT_BUREAU variables together to compute the aggregated
+#number of enquiries to Credit Bureau about the client one year before the application
+application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM <- application_train_selected$AMT_REQ_CREDIT_BUREAU_DAY+application_train_selected$AMT_REQ_CREDIT_BUREAU_MON+application_train_selected$AMT_REQ_CREDIT_BUREAU_QRT+application_train_selected$AMT_REQ_CREDIT_BUREAU_WEEK+application_train_selected$AMT_REQ_CREDIT_BUREAU_YEAR
+
+#Drop AMT_REQ_CREDIT_BUREAU_DAY, WEEK, MON, QRT, YEAR
+application_train_selected <- application_train_selected %>%
+    select(-(AMT_REQ_CREDIT_BUREAU_DAY)) %>%
+    select(-(AMT_REQ_CREDIT_BUREAU_WEEK)) %>%
+    select(-(AMT_REQ_CREDIT_BUREAU_MON)) %>%
+    select(-(AMT_REQ_CREDIT_BUREAU_QRT)) %>%
+    select(-(AMT_REQ_CREDIT_BUREAU_YEAR))
+
+#factorize CNT_FAM_MEMBERS, AMR_REQ_CREDIT_BUREAU_SUM
+application_train_selected$CNT_FAM_MEMBERS <- as.factor(application_train_selected$CNT_FAM_MEMBERS)
+application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_train_selected$AMR_REQ_CREDIT_BUREAU_SUM)
+
+```
+
+As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 6000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
+```{r}
+set.seed(19)
+application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 6000), ]
+summary(application_data_sam)
+```
+
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
