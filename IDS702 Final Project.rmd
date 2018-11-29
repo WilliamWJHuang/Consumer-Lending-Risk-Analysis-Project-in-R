@@ -71,7 +71,7 @@ application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_dat
 
 As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 8000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
 ```{r}
-set.seed(8)
+set.seed(100)
 application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 8000), ]
 summary(application_data_sam)
 ```
@@ -83,7 +83,7 @@ IWN_CAR_AGE and AMR_REQ_CREDOT_BUREAU_SUM are the two columns that contain missi
 md.pattern(application_data_sam)
 ```
 ```{r}
-application_MI <- mice(application_data_sam, m = 10, method = "cart", seed = 8)
+application_MI <- mice(application_data_sam, m = 10, method = "cart", seed = 10)
 ```
 ##Imputation Model Diagnostics
 ```{r}
@@ -94,6 +94,7 @@ stripplot(application_MI, AMR_REQ_CREDIT_BUREAU_SUM~TARGET, col=c("grey",mdc(2))
 ```
 
 ##Posterior Predictive Check on two complete datasets
+Both the histogram and boxplots look similiar for replica and complete datasets; therefore, we are confident about the quality of the imputation model.
 ```{r}
 application_ppcheck <- rbind(application_data_sam, application_data_sam)
 application_ppcheck[8001:16000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
@@ -108,15 +109,88 @@ boxplot(d1ppcheck$OWN_CAR_AGE[1:8000]~d1ppcheck$TARGET[1:8000], ylab="OWN_CAR_AG
 boxplot(d1ppcheck$OWN_CAR_AGE[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
 ```
 ```{r}
-par(mfrow = c(1,2))
-boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:8000]~d1ppcheck$TARGET[1:8000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
-#boxplot(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="AMR_REQ_CREDIT_BUREAU_SUM", xlab="TARGET", main = "AMR_REQ_CREDIT_BUREAU_SUM vs TARGET completed data")
+#Should I treat it as continuous?
+par(mfrow = c(2,1))
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:8000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:16000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
 
 ```
 
+###Regression Model
+```{r}
+reg <- with(data = application_MI, glm(TARGET ~ CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY
+            + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE 
+            + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS 
+            + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM),
+            family = binomial)
+summary(pool(reg))
+summary(pool(reg), conf.int=T)
+```
 
 
+##Use completed datasets to see AUCs for the fitted models
+```{r}
+#Dataset 1
+par(mfrow=c(1,1))
+cd1 <- mice::complete(application_MI, 1)
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY
+               + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE 
+               + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS 
+               + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, 
+               family=binomial)
+roc(cd1$TARGET, fitted(reg_cd1), plot=T, legacy.axes=T)
+```
 
+```{r}
+#Dataset 2
+cd2 <- mice::complete(application_MI, 2)
+reg_cd2 <- glm(data=cd2, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY
+              + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE 
+              + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS 
+              + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, 
+              family=binomial)
+roc(cd2$TARGET, fitted(reg_cd2), plot=T, legacy.axes=T)
+
+```
+```{r}
+#Dataset 3
+cd3 <- mice::complete(application_MI, 3)
+reg_cd3 <- glm(data=cd3, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY
+               + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE 
+               + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS 
+               + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, 
+               family=binomial)
+roc(cd3$TARGET, fitted(reg_cd3), plot=T, legacy.axes=T)
+```
+
+###Model Diagnostics
+```{r}
+#Dataset 1
+cd1 <- mice::complete(application_MI, 1)
+#Binned residual plots
+rawresid1 = cd1$TARGET - fitted(reg_cd1)
+#continuous variables
+binnedplot(x=cd1$AMT_INCOME_TOTAL, y = rawresid1, xlab = "AMT_INCOME_TOTAL", ylab = "Residuals", 
+           main = "Binned residuals versus AMT_INCOME_TOTAL")
+binnedplot(x=cd1$AMT_CREDIT, y = rawresid1, xlab = "AMT_CREDIT", ylab = "Residuals", 
+           main = "Binned residuals versus AMT_CREDIT")
+binnedplot(x=cd1$AMT_ANNUITY, y = rawresid1, xlab = "AMT_ANNUITY", ylab = "Residuals", 
+           main = "Binned residuals versus AMT_ANNUITY")
+binnedplot(x=cd1$REGION_POPULATION_RELATIVE , y = rawresid1, xlab = "REGION_POPULATION_RELATIVE", ylab = "Residuals", 
+           main = "Binned residuals versus REGION_POPULATION_RELATIVE")
+binnedplot(x=cd1$DAYS_BIRTH , y = rawresid1, xlab = "DAYS_BIRTH", ylab = "Residuals", 
+           main = "Binned residuals versus DAYS_BIRTH")
+binnedplot(x=cd1$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = "Residuals", 
+           main = "Binned residuals versus DAYS_EMPLOYED")
+binnedplot(x=cd1$OWN_CAR_AGE , y = rawresid1, xlab = "OWN_CAR_AGE", ylab = "Residuals", 
+           main = "Binned residuals versus OWN_CAR_AGE")
+binnedplot(x=as.numeric(cd1$AMR_REQ_CREDIT_BUREAU_SUM) , y = rawresid1, xlab = "OAMR_REQ_CREDIT_BUREAU_SUM", ylab = "Residuals", main = "Binned residuals versus AMR_REQ_CREDIT_BUREAU_SUM")
+
+#DAYS_EMPLOYED
+temp <- cd1[cd1$DAYS_EMPLOYED != 365243,]
+binnedplot(x=temp$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = "Residuals", 
+           main = "Binned residuals versus DAYS_EMPLOYED")
+```
 
 
 
