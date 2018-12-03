@@ -18,7 +18,7 @@ library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-setwd("/Users/wh132/Downloads")
+setwd("/Users/Macintosh/Desktop")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
@@ -72,7 +72,7 @@ application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_dat
 As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 8000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
 ```{r}
 set.seed(100)
-application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 8000), ]
+application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 100000), ]
 summary(application_data_sam)
 ```
 
@@ -97,7 +97,7 @@ stripplot(application_MI, AMR_REQ_CREDIT_BUREAU_SUM~TARGET, col=c("grey",mdc(2))
 Both the histogram and boxplots look similiar for replica and complete datasets; therefore, we are confident about the quality of the imputation model.
 ```{r}
 application_ppcheck <- rbind(application_data_sam, application_data_sam)
-application_ppcheck[8001:16000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
+application_ppcheck[100001:200000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
 application_ppcheck_MI <- mice(application_ppcheck, m = 10, method = "cart", seed = 8)
 d1ppcheck <- mice::complete(application_ppcheck_MI, 1)
 d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
@@ -105,14 +105,14 @@ d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
 ```{r}
 #dataset1
 par(mfrow = c(1,2))
-boxplot(d1ppcheck$OWN_CAR_AGE[1:8000]~d1ppcheck$TARGET[1:8000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
-boxplot(d1ppcheck$OWN_CAR_AGE[8001:10000]~d1ppcheck$TARGET[8001:10000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+boxplot(d1ppcheck$OWN_CAR_AGE[1:100000]~d1ppcheck$TARGET[1:100000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+boxplot(d1ppcheck$OWN_CAR_AGE[100001:200000]~d1ppcheck$TARGET[100001:200000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
 ```
 ```{r}
 #Should I treat it as continuous?
 par(mfrow = c(2,1))
-hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:8000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
-hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[8001:16000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:100000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[100001:200000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
 
 ```
 
@@ -192,9 +192,106 @@ binnedplot(x=temp$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = 
            main = "Binned residuals versus DAYS_EMPLOYED")
 ```
 
+#Check for interaction effects
+#annuity X own_house
+```{r}
+library(lattice)
+bwplot(as.factor(TARGET)~AMT_ANNUITY|FLAG_OWN_REALTY, data = cd1, ylab = "TARGET")
+```
 
 
+```{r}
+#Base Model
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_AnnuityXRealty <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_REALTY, family=binomial)
+anova(reg_cd1, reg_AnnuityXRealty, test = "Chisq")
+```
 
+#annuity X name_contract_type
+```{r}
+bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(NAME_CONTRACT_TYPE), data = cd1, ylab = "TARGET")
+```
+
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*NAME_CONTRACT_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#flag_own_car X annuity
+```{r}
+bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(FLAG_OWN_CAR), data = complete_train_data, ylab = "TARGET")
+```
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_CAR, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#flag_own_realty X annuity
+```{r}
+bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(FLAG_OWN_REALTY), data = complete_train_data, ylab = "TARGET")
+```
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_REALTY, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#income_type X amt_credit
+```{r}
+bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(NAME_INCOME_TYPE), data = complete_train_data, ylab = "TARGET")
+```
+
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_CREDIT*NAME_INCOME_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#name_education_type X income
+```{r}
+bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(NAME_EDUCATION_TYPE), data = complete_train_data, ylab = "TARGET")
+```
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_INCOME_TOTAL*NAME_EDUCATION_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#occupation_type X income
+```{r}
+bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(OCCUPATION_TYPE), data = complete_train_data, ylab = "TARGET")
+```
+
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_INCOME_TOTAL*OCCUPATION_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+
+#occupation_type X credit
+```{r}
+bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(OCCUPATION_TYPE), data = complete_train_data, ylab = "TARGET")
+```
+
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_CREDIT*OCCUPATION_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
+
+#organization_type X credit
+```{r}
+bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(ORGANIZATION_TYPE), data = complete_train_data, ylab = "TARGET")
+```
+
+```{r}
+reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
+reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_CREDIT*ORGANIZATION_TYPE, family=binomial)
+anova(reg_cd1, reg_int, test = "Chisq")
+```
 
 
 
