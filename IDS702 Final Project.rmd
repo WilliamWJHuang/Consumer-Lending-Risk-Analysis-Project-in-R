@@ -48,7 +48,8 @@ library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-setwd("/Users/wh132/Desktop")
+#setwd("/Users/wh132/Desktop")
+setwd("/Users/Macintosh/Desktop")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
@@ -216,6 +217,8 @@ temp <- cd1[cd1$DAYS_EMPLOYED != 365243,]
 binnedplot(x=temp$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = "Residuals", 
            main = "Binned residuals versus DAYS_EMPLOYED")
 ```
+
+After I excluded the large value in the `DAYS_EMPLOYED` columns(`application_data_sam$DAYS_EMPLOYED == 365,243`), the residual plot suggests no major violation of model assumptions. For those large value outliers, as they are also valid input data, I have no scientific reason to remove them.
 ```{r, fig.width=7}
 par(mfrow = c(1,2))
 binnedplot(x=cd1$DAYS_EMPLOYED[cd1$DAYS_EMPLOYED != max(application_data_sam$DAYS_EMPLOYED)] , y = rawresid1[cd1$DAYS_EMPLOYED != max(application_data_sam$DAYS_EMPLOYED)], xlab = "DAYS_EMPLOYED", ylab = "Residuals", 
@@ -224,14 +227,12 @@ binnedplot(x=cd1$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = "
            main = "Binned residuals versus DAYS_EMPLOYED")
 ```
 
-
-
-###Interaction Effect
-There are several pairs of variables we would like to check for possible interaction effects.
+##Interaction Effect
+There are several pairs of variables we would like to check for possible interaction effects based on the scientific reasons underneath.
 
 - `NAME_INCOME_TYPE` versus `AMT_CREDIT`
-The amount of credit a client is given is typically based on his income type. For example, state servants are considered more stable and banks typically give them higher amounts of credits. Therefore, we believe there could be an interaction effect between these two variables.
-However, after taking an F-test, we could conclude that the interaction effect is not significant and we should not incorporate into our model.
+The amount of credit a client has is typically based on his income type in the financial practice. For example, state servants' incomes are considered more stable and banks typically give them higher amounts of credits. Therefore, I believe there could be an interaction effect between these two variables.
+However, after taking an F-test, we could conclude that the interaction effect is not significant and I should not incorporate it into my model.
 ```{r}
 bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(NAME_INCOME_TYPE), data = cd1, ylab = "TARGET")
 ```
@@ -243,7 +244,7 @@ anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
 - `NAME_EDUCATION_TYPE` versus `AMT_INCOME_TOTAL`
-The amount of income is typically associated with the highest education he or her received. Therefore, we try to see if there's any interaction effect between these two variables. The plots below suggest that their might be an interaction effect, though not very clear. But the F-test indicates that we should not add an interaction term between these two variables in our regression model.
+The amount of income is typically associated with the highest education he or her received. Therefore, I try to see if there's any interaction effect between these two variables. The plots below suggest that there might be an interaction effect, though not very clear. But the F-test indicates that I should not add an interaction term between these two variables in the regression model.
 ```{r}
 bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(NAME_EDUCATION_TYPE), data = cd1, ylab = "TARGET")
 ```
@@ -254,7 +255,7 @@ anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
 - `OCCUPATION_TYPE` versus `AMT_INCOME_TOTAL`
-Different kinds of occupation generally have different levels of incomes. For example, high skill tech staffs typically have higher incomes than cleaning staffs. Hence, we think there might be an interaction effect. However, the F-test suggests that the interaction effect is not significant enough and we should not add it into our model.
+Different kinds of occupation generally have different levels of incomes. For example, high skill tech staffs typically have higher incomes than cleaning staffs. Hence, I think there might be an interaction effect. However, the F-test suggests that the interaction effect is not significant enough and I should not add it into the model.
 ```{r}
 bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(OCCUPATION_TYPE), data = cd1, ylab = "TARGET")
 ```
@@ -266,7 +267,7 @@ anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
 - `ORGANIZATION_TYPE` versus `AMT_CREDIT`
-For most banks' practices, banks generally offer different credit amounts for people work in different organization. For example, most banks offer Fortune 500 companies' employees more credits. As a result, we think there might be an interaction effect between these two variables. The plots below also suggests that there could be a potential interaction term to be added. However, the F-test indicates that the interaction term is not significant enough to be added into our model. 
+For most banks' practices, banks generally offer different credit amounts for people work in different organizations. For example, most banks offer Fortune 500 companies' employees more credits. As a result, we think there might be an interaction effect between these two variables. The plots below also suggests that there could be a potential interaction term to be added. However, the F-test indicates that the interaction term is not significant enough to be added into the regression model. 
 ```{r}
 bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(ORGANIZATION_TYPE), data = cd1, ylab = "TARGET")
 ```
@@ -285,7 +286,7 @@ summary(pool(reg))
 summary(pool(reg), conf.int=T)
 ```
 
-
+#Model Limitation
 
 
 
