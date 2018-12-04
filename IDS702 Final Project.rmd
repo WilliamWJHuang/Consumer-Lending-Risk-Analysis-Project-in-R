@@ -5,32 +5,62 @@ date: "November 28, 2018"
 output: html_document
 ---
 
-###Project Objective
-Home Credit Group, founded in Czech Republic a d headquartered in Netherlands, is a multinational non-bank financial company that provides consumer financial products, such as personal lending and credit card businesses. The company focuses primarily on people with no or little credit history. The project objective is to interpret how the information on the laon applications could affect the default risks of loan applicants.
+#Project Objective
+Home Credit Group, founded in Czech Republic a d headquartered in Netherlands, is a multinational non-bank financial company that provides consumer financial products, such as personal lending and credit card businesses. The company focuses primarily on people with no or little credit history. The project objective is to interpret how the information on the loan applications could affect the default risks of loan applicants.
 
-##Load Data and Data Pre-processing
+##Variable Descriptions
+- **TARGET**: Target variable (1 - client with payment difficulties: he/she had late payment more than X days on at least one of the first Y installments of the loan in our sample, 0 - all other cases)
+- **CODE_GENDER**: Gender of the client
+- **NAME_CONTRACT_TYPE**: Identification if loan is cash or revolving
+- **AMT_INCOME_TOTAL**: Income of the client
+- **FLAG_OWN_CAR**: Flag if the client owns a car
+- **FLAG_OWN_REALTY**: Flag if client owns a house or flat
+- **CNT_CHILDREN**: Flag if client owns a house or flat
+- **AMT_CREDIT**: Credit amount of the loan
+- **AMT_ANNUITY**: Loan annuity
+- **AMT_GOODS_PRICE**: For consumer loans it is the price of the goods for which the loan is given
+- **NAME_TYPE_SUITE**: Who was accompanying client when he was applying for the loan
+- **NAME_INCOME_TYPE**: Clients income type (businessman, working, maternity leave,…)
+- **NAME_EDUCATION_TYPE**: Level of highest education the client achieved
+- **NAME_FAMILY_STATUS**: Family status of the client
+- **NAME_HOUSING_TYPE**: What is the housing situation of the client (renting, living with parents, ...)
+- **REGION_POPULATION_RELATIVE**: Normalized population of region where client lives (higher number means the client lives in more populated region)
+- **DAYS_BIRTH**: Client's age in days at the time of application
+- **DAYS_EMPLOYED**: How many days before the application the person started current employment
+- **OWN_CAR_AGE**: Age of client's car
+- **OCCUPATION_TYPE**: What kind of occupation does the client have
+- **CNT_FAM_MEMBERS**: How many family members does client have
+- **ORGANIZATION_TYPE**: Type of organization where client works
+- **AMT_REQ_CREDIT_BUREAU_DAY**: Number of enquiries to Credit Bureau about the client one day before application (excluding one hour before application)
+- **AMT_REQ_CREDIT_BUREAU_WEEK**: Number of enquiries to Credit Bureau about the client one week before application (excluding one day before application)
+- **AMT_REQ_CREDIT_BUREAU_MON**: Number of enquiries to Credit Bureau about the client one month before application (excluding one week before application)
+- **AMT_REQ_CREDIT_BUREAU_QRT**: Number of enquiries to Credit Bureau about the client 3 month before application (excluding one month before application)
+- **AMT_REQ_CREDIT_BUREAU_YEAR**: Number of enquiries to Credit Bureau about the client one day year (excluding last 3 months before application)
+
+#Load Data and Data Pre-processing
 As the original dataset contains over 200 independent variables, I picked the 23 variables for further analysis and interpretations based on my interest and work experience in this industry.
-Besides, I also added the following 5 variables together to improve the interpretability of my model: AMT_REQ_CREDIT_BUREAU_DAY, AMT_REQ_CREDIT_BUREAU_WEEK, AMT_REQ_CREDIT_BUREAU_MON, AMT_REQ_CREDIT_BUREAU_QRT, AMT_REQ_CREDIT_BUREAU_YEAR. 
-These variables represent the number of enquiries to Credit Bureau about the client one day, week(excluding one day before), month(excluding one week before), quarter(excluding one month before) and year(excluding one quarter before) before application. As my goal is to construct a interpretation model, instead of a predictive model, it will enhance the interpretability of the model substantially by adding them together. On the other hand, if I intended to build a predictive model, I should keep them as 5 different variables.
+Besides, I also added the following 6 variables together to improve the interpretability of my model: `AMT_REQ_CREDIT_BUREAU_HOUR`, `AMT_REQ_CREDIT_BUREAU_DAY`, `AMT_REQ_CREDIT_BUREAU_WEEK`, `AMT_REQ_CREDIT_BUREAU_MON`, `AMT_REQ_CREDIT_BUREAU_QRT`, `AMT_REQ_CREDIT_BUREAU_YEAR`. 
+These variables represent the number of enquiries to Credit Bureau about the client one hour, day(excluding one hour before), week(excluding one day before), month(excluding one week before), quarter(excluding one month before) and year(excluding one quarter before) before application. As my goal is to construct a interpretation model, instead of a predictive model, it will enhance the interpretability of the model substantially by adding them together. On the other hand, if I intended to build a predictive model, I should keep them as 5 different variables.
 ```{r setup, include=FALSE}
 library(mice)
 library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-setwd("/Users/Macintosh/Desktop")
+setwd("/Users/wh132/Downloads")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
 #select interested variables
-application_data_selected <- subset(application_data, select = c("TARGET","CODE_GENDER","NAME_CONTRACT_TYPE","AMT_INCOME_TOTAL","FLAG_OWN_CAR","FLAG_OWN_REALTY","CNT_CHILDREN","AMT_CREDIT", "AMT_ANNUITY", "AMT_GOODS_PRICE", "NAME_TYPE_SUITE","NAME_INCOME_TYPE","NAME_EDUCATION_TYPE","NAME_FAMILY_STATUS","NAME_HOUSING_TYPE","REGION_POPULATION_RELATIVE","DAYS_BIRTH","DAYS_EMPLOYED","OWN_CAR_AGE","OCCUPATION_TYPE","CNT_FAM_MEMBERS","ORGANIZATION_TYPE","AMT_REQ_CREDIT_BUREAU_DAY","AMT_REQ_CREDIT_BUREAU_WEEK","AMT_REQ_CREDIT_BUREAU_MON","AMT_REQ_CREDIT_BUREAU_QRT","AMT_REQ_CREDIT_BUREAU_YEAR"))
+application_data_selected <- subset(application_data, select = c("TARGET","CODE_GENDER","NAME_CONTRACT_TYPE","AMT_INCOME_TOTAL","FLAG_OWN_CAR","FLAG_OWN_REALTY","CNT_CHILDREN","AMT_CREDIT", "AMT_ANNUITY", "AMT_GOODS_PRICE", "NAME_TYPE_SUITE","NAME_INCOME_TYPE","NAME_EDUCATION_TYPE","NAME_FAMILY_STATUS","NAME_HOUSING_TYPE","REGION_POPULATION_RELATIVE","DAYS_BIRTH","DAYS_EMPLOYED","OWN_CAR_AGE","OCCUPATION_TYPE","CNT_FAM_MEMBERS","ORGANIZATION_TYPE","AMT_REQ_CREDIT_BUREAU_HOUR","AMT_REQ_CREDIT_BUREAU_DAY","AMT_REQ_CREDIT_BUREAU_WEEK","AMT_REQ_CREDIT_BUREAU_MON","AMT_REQ_CREDIT_BUREAU_QRT","AMT_REQ_CREDIT_BUREAU_YEAR"))
 
 #combine all the AMT_REQ_CREDIT_BUREAU variables together to compute the aggregated
 #number of enquiries to Credit Bureau about the client one year before the application
-application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- application_data_selected$AMT_REQ_CREDIT_BUREAU_DAY+application_data_selected$AMT_REQ_CREDIT_BUREAU_MON+application_data_selected$AMT_REQ_CREDIT_BUREAU_QRT+application_data_selected$AMT_REQ_CREDIT_BUREAU_WEEK+application_data_selected$AMT_REQ_CREDIT_BUREAU_YEAR
+application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- application_data_selected$AMT_REQ_CREDIT_BUREAU_HOUR+application_data_selected$AMT_REQ_CREDIT_BUREAU_DAY+application_data_selected$AMT_REQ_CREDIT_BUREAU_MON+application_data_selected$AMT_REQ_CREDIT_BUREAU_QRT+application_data_selected$AMT_REQ_CREDIT_BUREAU_WEEK+application_data_selected$AMT_REQ_CREDIT_BUREAU_YEAR
 
-#Drop AMT_REQ_CREDIT_BUREAU_DAY, WEEK, MON, QRT, YEAR
+#Drop AMT_REQ_CREDIT_BUREAU_HOUR, DAY, WEEK, MON, QRT, YEAR
 application_data_selected <- application_data_selected %>%
+    dplyr::select(-(AMT_REQ_CREDIT_BUREAU_HOUR)) %>%
     dplyr::select(-(AMT_REQ_CREDIT_BUREAU_DAY)) %>%
     dplyr::select(-(AMT_REQ_CREDIT_BUREAU_WEEK)) %>%
     dplyr::select(-(AMT_REQ_CREDIT_BUREAU_MON)) %>%
@@ -47,15 +77,15 @@ cor(cc(application_data_selected[,num]), use = "pair")
 ```
 
 Based on the correlation table above, two pairs of independent variables have an extremely high correlation:
-(1) (AMT_CREDIT, AMT_GOODS_PRICE), corr = 0.987 
-AMT_GOODS_PRICE represents the goods price of good that client asked for on the previous application.
-AMT_CREDIT represents the final credit amount on the previous application.
+(1) (`AMT_CREDIT`, `AMT_GOODS_PRICE`), corr = 0.987 
+`AMT_GOODS_PRICE` represents the goods price of good that client asked for on the previous application.
+`AMT_CREDIT` represents the final credit amount on the previous application.
 Through the definitions of these two variables, it's clear that we could drop one of the variables.
 
-(2) (CNT_FAM_MEMBERS, CNT_CHILDREN), corr = 0.914
-CNT_FAM_mEMBERS represents how many family members clients have
-CNT_CHILDREN represents how many children clients have
-Through the definitions of these two variables, it's clear that we could drop one of the variables.
+(2) (`CNT_FAM_MEMBERS`, `CNT_CHILDREN`), corr = 0.914
+`CNT_FAM_mEMBERS` represents how many family members clients have
+`CNT_CHILDREN` represents how many children clients have
+Through the definitions of these two variables, it's clear that we should drop one of the variables.
 
 ```{r}
 application_data_selected <- application_data_selected %>%
@@ -63,29 +93,40 @@ application_data_selected <- application_data_selected %>%
     dplyr::select(-(CNT_CHILDREN))
 ```
 
+
+Here we should factorize `CNT_FAM_MEMBERS`, representing how many family members the loan applicant has, and `AMT_REQ_CREDIT_BUREAU_SUM`, representing number of enquiries to Credit Bureau about the client one year before submitting his loan application, because both variables are more like categorical rather than continuous, based on their definitions. 
 ```{r}
 #factorize CNT_FAM_MEMBERS, AMR_REQ_CREDIT_BUREAU_SUM
 application_data_selected$CNT_FAM_MEMBERS <- as.factor(application_data_selected$CNT_FAM_MEMBERS)
 application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM <- as.factor(application_data_selected$AMR_REQ_CREDIT_BUREAU_SUM)
 ```
 
-As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 8000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
+As the dataset is extremely large and my computer's computing power doesn't support this size of computations. Therefore, I decided to randomly select 10000 observations to run the following analysis. Besides, the random selection process should be able to represent the population.
 ```{r}
 set.seed(100)
-application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 100000), ]
+application_data_sam <- application_data_selected[sample(nrow(application_data_selected), 10000), ]
 summary(application_data_sam)
+```
+###Data Description
+Through the two tables below, we can see that the distributions of each variable in the original and new datasets are fairly similar. Besides, we also have some missing values and should consider missing value imputations.
+```{r}
+summary(application_data_selected) #original datasets with selected variables
+```
+```{r}
+summary(application_data_sam) #the dataset after the random selection process
 ```
 
 ###Missing values imputation
-IWN_CAR_AGE and AMR_REQ_CREDOT_BUREAU_SUM are the two columns that contain missing values in the dataset. I used the mice package to conduct missing value imputation to generate complete datasets. For the imputation method, I chose cart, instead of the default method. I have tried to use the default method to impute missing values; however, it returned the following error "system is computationally singular". The cause of the problem here could probably be the large number of unbalanced factor variables in the dataset. When these are turned intodummy variables there's a high probability that one colum is a linear combination of another. As the default imputation methods involve linear regression, this results in a X matrix that cannot be inverted. Therefore, we consider to change the imputation method that is not stochastic, which require no X matrix inversion. (Reference: )
-```{r echo = T, results = 'hide'}
+`IWN_CAR_AGE` and `AMR_REQ_CREDOT_BUREAU_SUM` are the two columns that contain missing values in the dataset. I used the mice package to conduct missing value imputation to generate complete datasets. For the imputation method, I chose cart, instead of the default method. I have tried to use the default method to impute missing values; however, it returned the following error "system is computationally singular". The cause of the problem here could probably be the large number of unbalanced factor variables in the dataset. When these are turned intodummy variables there's a high probability that one colum is a linear combination of another. As the default imputation methods involve linear regression, this results in a X matrix that cannot be inverted. Therefore, we consider to change the imputation method that is not stochastic, which require no X matrix inversion. (Reference: [links](www.kaggle.com))
+```{r echo = T}
 #check pattern
 md.pattern(application_data_sam)
 ```
-```{r}
-application_MI <- mice(application_data_sam, m = 10, method = "cart", seed = 10)
+```{r, results = 'hide'}
+application_MI <- mice(application_data_sam, m = 10, method = "cart", seed = 8)
 ```
 ##Imputation Model Diagnostics
+Based on the charts below, we are comfortable with our missing value imputations.
 ```{r}
 stripplot(application_MI, col=c("grey",mdc(2)),pch=c(1,20))
 stripplot(application_MI, OWN_CAR_AGE~TARGET, col=c("grey",mdc(2)),pch=c(1,20), xlab = 'TARGET', ylab = "OWN_CAR_AGE")
@@ -95,9 +136,9 @@ stripplot(application_MI, AMR_REQ_CREDIT_BUREAU_SUM~TARGET, col=c("grey",mdc(2))
 
 ##Posterior Predictive Check on two complete datasets
 Both the histogram and boxplots look similiar for replica and complete datasets; therefore, we are confident about the quality of the imputation model.
-```{r}
+```{r, results = 'hide'}
 application_ppcheck <- rbind(application_data_sam, application_data_sam)
-application_ppcheck[100001:200000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
+application_ppcheck[10001:20000, apply(is.na(application_data_sam), any, MARGIN = 2)] <- NA
 application_ppcheck_MI <- mice(application_ppcheck, m = 10, method = "cart", seed = 8)
 d1ppcheck <- mice::complete(application_ppcheck_MI, 1)
 d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
@@ -105,14 +146,14 @@ d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
 ```{r}
 #dataset1
 par(mfrow = c(1,2))
-boxplot(d1ppcheck$OWN_CAR_AGE[1:100000]~d1ppcheck$TARGET[1:100000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
-boxplot(d1ppcheck$OWN_CAR_AGE[100001:200000]~d1ppcheck$TARGET[100001:200000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+boxplot(d1ppcheck$OWN_CAR_AGE[1:10000]~d1ppcheck$TARGET[1:10000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
+boxplot(d1ppcheck$OWN_CAR_AGE[10001:20000]~d1ppcheck$TARGET[10001:20000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
 ```
 ```{r}
 #Should I treat it as continuous?
 par(mfrow = c(2,1))
-hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:100000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
-hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[100001:200000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:10000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
+hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[10001:20000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
 
 ```
 
@@ -128,7 +169,7 @@ summary(pool(reg), conf.int=T)
 ```
 
 
-##Use completed datasets to see AUCs for the fitted models
+###Use completed datasets to see AUCs for the fitted models
 ```{r}
 #Dataset 1
 par(mfrow=c(1,1))
@@ -163,7 +204,7 @@ reg_cd3 <- glm(data=cd3, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TO
 roc(cd3$TARGET, fitted(reg_cd3), plot=T, legacy.axes=T)
 ```
 
-###Model Diagnostics
+#Model Diagnostics
 ```{r}
 #Dataset 1
 cd1 <- mice::complete(application_MI, 1)
@@ -192,55 +233,14 @@ binnedplot(x=temp$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = 
            main = "Binned residuals versus DAYS_EMPLOYED")
 ```
 
-#Check for interaction effects
-#annuity X own_house
-```{r}
-library(lattice)
-bwplot(as.factor(TARGET)~AMT_ANNUITY|FLAG_OWN_REALTY, data = cd1, ylab = "TARGET")
-```
+###Interaction Effect
+There are several pairs of variables we would like to check for possible interaction effects.
 
-
+- `NAME_INCOME_TYPE` versus `AMT_CREDIT`
+The amount of credit a client is given is typically based on his income type. For example, state servants are considered more stable and banks typically give them higher amounts of credits. Therefore, we believe there could be an interaction effect between these two variables.
+However, after taking an F-test, we could conclude that the interaction effect is not significant and we should not incorporate into our model.
 ```{r}
-#Base Model
-reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
-reg_AnnuityXRealty <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_REALTY, family=binomial)
-anova(reg_cd1, reg_AnnuityXRealty, test = "Chisq")
-```
-
-#annuity X name_contract_type
-```{r}
-bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(NAME_CONTRACT_TYPE), data = cd1, ylab = "TARGET")
-```
-
-```{r}
-reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
-reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*NAME_CONTRACT_TYPE, family=binomial)
-anova(reg_cd1, reg_int, test = "Chisq")
-```
-
-#flag_own_car X annuity
-```{r}
-bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(FLAG_OWN_CAR), data = complete_train_data, ylab = "TARGET")
-```
-```{r}
-reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
-reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_CAR, family=binomial)
-anova(reg_cd1, reg_int, test = "Chisq")
-```
-
-#flag_own_realty X annuity
-```{r}
-bwplot(as.factor(TARGET)~AMT_ANNUITY|as.factor(FLAG_OWN_REALTY), data = complete_train_data, ylab = "TARGET")
-```
-```{r}
-reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
-reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_ANNUITY*FLAG_OWN_REALTY, family=binomial)
-anova(reg_cd1, reg_int, test = "Chisq")
-```
-
-#income_type X amt_credit
-```{r}
-bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(NAME_INCOME_TYPE), data = complete_train_data, ylab = "TARGET")
+bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(NAME_INCOME_TYPE), data = cd1, ylab = "TARGET")
 ```
 
 ```{r}
@@ -249,9 +249,10 @@ reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TO
 anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
-#name_education_type X income
+- `NAME_EDUCATION_TYPE` versus `AMT_INCOME_TOTAL`
+The amount of income is typically associated with the highest education he or her received. Therefore, we try to see if there's any interaction effect between these two variables. The plots below suggest that their might be an interaction effect, though not very clear. But the F-test indicates that we should not add an interaction term between these two variables in our regression model.
 ```{r}
-bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(NAME_EDUCATION_TYPE), data = complete_train_data, ylab = "TARGET")
+bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(NAME_EDUCATION_TYPE), data = cd1, ylab = "TARGET")
 ```
 ```{r}
 reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
@@ -259,9 +260,10 @@ reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TO
 anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
-#occupation_type X income
+- `OCCUPATION_TYPE` versus `AMT_INCOME_TOTAL`
+Different kinds of occupation generally have different levels of incomes. For example, high skill tech staffs typically have higher incomes than cleaning staffs. Hence, we think there might be an interaction effect. However, the F-test suggests that the interaction effect is not significant enough and we should not add it into our model.
 ```{r}
-bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(OCCUPATION_TYPE), data = complete_train_data, ylab = "TARGET")
+bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(OCCUPATION_TYPE), data = cd1, ylab = "TARGET")
 ```
 
 ```{r}
@@ -270,21 +272,10 @@ reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TO
 anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
-
-#occupation_type X credit
+- `ORGANIZATION_TYPE` versus `AMT_CREDIT`
+For most banks' practices, banks generally offer different credit amounts for people work in different organization. For example, most banks offer Fortune 500 companies' employees more credits. As a result, we think there might be an interaction effect between these two variables. The plots below also suggests that there could be a potential interaction term to be added. However, the F-test indicates that the interaction term is not significant enough to be added into our model. 
 ```{r}
-bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(OCCUPATION_TYPE), data = complete_train_data, ylab = "TARGET")
-```
-
-```{r}
-reg_cd1 <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM, family=binomial)
-reg_int <- glm(data=cd1, TARGET~CODE_GENDER + NAME_CONTRACT_TYPE + AMT_INCOME_TOTAL + FLAG_OWN_CAR + FLAG_OWN_REALTY + AMT_CREDIT + AMT_ANNUITY + NAME_TYPE_SUITE + NAME_INCOME_TYPE + NAME_EDUCATION_TYPE + NAME_FAMILY_STATUS + NAME_HOUSING_TYPE + REGION_POPULATION_RELATIVE + DAYS_BIRTH + DAYS_EMPLOYED + OWN_CAR_AGE + OCCUPATION_TYPE + CNT_FAM_MEMBERS + ORGANIZATION_TYPE + AMR_REQ_CREDIT_BUREAU_SUM + AMT_CREDIT*OCCUPATION_TYPE, family=binomial)
-anova(reg_cd1, reg_int, test = "Chisq")
-```
-
-#organization_type X credit
-```{r}
-bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(ORGANIZATION_TYPE), data = complete_train_data, ylab = "TARGET")
+bwplot(as.factor(TARGET)~AMT_CREDIT|as.factor(ORGANIZATION_TYPE), data = cd1, ylab = "TARGET")
 ```
 
 ```{r}
@@ -294,6 +285,7 @@ anova(reg_cd1, reg_int, test = "Chisq")
 ```
 
 
+#Model Interpretation
 
 
 
