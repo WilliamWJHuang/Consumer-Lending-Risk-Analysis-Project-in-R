@@ -48,8 +48,8 @@ library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-#setwd("/Users/wh132/Desktop")
-setwd("/Users/Macintosh/Desktop")
+setwd("/Users/wh132/Desktop")
+#setwd("/Users/Macintosh/Desktop")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
@@ -144,17 +144,64 @@ application_ppcheck_MI <- mice(application_ppcheck, m = 10, method = "cart", see
 d1ppcheck <- mice::complete(application_ppcheck_MI, 1)
 d2ppcheck <- mice::complete(application_ppcheck_MI, 2)
 ```
-```{r, fig.width=5}
+```{r, fig.width=7}
 #dataset1
 par(mfrow = c(1,2))
 boxplot(d1ppcheck$OWN_CAR_AGE[1:10000]~d1ppcheck$TARGET[1:10000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
 boxplot(d1ppcheck$OWN_CAR_AGE[10001:20000]~d1ppcheck$TARGET[10001:20000], ylab="OWN_CAR_AGE", xlab="TARGET", main = "OWN_CAR_AGE vs TARGET completed data")
 ```
-```{r, fig.width=5}
+```{r, fig.width=7}
 par(mfrow = c(2,1))
 hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[1:10000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM complete data")
 hist(as.numeric(d1ppcheck$AMR_REQ_CREDIT_BUREAU_SUM[10001:20000]), xlab="AMR_REQ_CREDIT_BUREAU_SUM", main = "AMR_REQ_CREDIT_BUREAU_SUM replicated data")
 ```
+
+##Exploratory Data Analysis
+######For categorical variables:
+```{r}
+#Dataset 1
+cd1 <- mice::complete(application_MI, 1)
+tapply(cd1$TARGET, cd1$CODE_GENDER, mean)
+tapply(cd1$TARGET, cd1$NAME_CONTRACT_TYPE, mean)
+tapply(cd1$TARGET, cd1$FLAG_OWN_CAR, mean)
+tapply(cd1$TARGET, cd1$FLAG_OWN_REALTY, mean)
+tapply(cd1$TARGET, cd1$NAME_TYPE_SUITE, mean)
+tapply(cd1$TARGET, cd1$NAME_INCOME_TYPE, mean)
+tapply(cd1$TARGET, cd1$NAME_EDUCATION_TYPE, mean)
+tapply(cd1$TARGET, cd1$NAME_FAMILY_STATUS, mean)
+tapply(cd1$TARGET, cd1$NAME_HOUSING_TYPE, mean)
+tapply(cd1$TARGET, cd1$OCCUPATION_TYPE, mean)
+tapply(cd1$TARGET, cd1$CNT_FAM_MEMBERS, mean)
+tapply(cd1$TARGET, cd1$ORGANIZATION_TYPE, mean)
+```
+
+######For continuous variables:
+
+```{r, fig.width=7}
+par(mfrow = c(3,3))
+binnedplot(x=cd1$AMT_INCOME_TOTAL, y = cd1$TARGET, xlab = "AMT_INCOME_TOTAL", ylab = "TARGET", 
+           main = "Binned TARGET versus AMT_INCOME_TOTAL")
+binnedplot(x=cd1$AMT_CREDIT, y = cd1$TARGET, xlab = "AMT_CREDIT", ylab = "TARGET", 
+           main = "Binned TARGET versus AMT_CREDIT")
+binnedplot(x=cd1$AMT_ANNUITY, y = cd1$TARGET, xlab = "AMT_ANNUITY", ylab = "TARGET", 
+           main = "Binned TARGET versus AMT_ANNUITY")
+binnedplot(x=cd1$REGION_POPULATION_RELATIVE , y = cd1$TARGET, xlab = "REGION_POPULATION_RELATIVE", ylab = "TARGET", 
+           main = "Binned TARGET versus REGION_POPULATION_RELATIVE")
+binnedplot(x=cd1$DAYS_BIRTH , y = cd1$TARGET, xlab = "DAYS_BIRTH", ylab = "TARGET", 
+           main = "Binned TARGET versus DAYS_BIRTH")
+binnedplot(x=cd1$DAYS_EMPLOYED , y = cd1$TARGET, xlab = "DAYS_EMPLOYED", ylab = "TARGET", 
+           main = "Binned TARGET versus DAYS_EMPLOYED")
+binnedplot(x=cd1$OWN_CAR_AGE , y = cd1$TARGET, xlab = "OWN_CAR_AGE", ylab = "TARGET", 
+           main = "Binned TARGET versus OWN_CAR_AGE")
+binnedplot(x=as.numeric(cd1$AMR_REQ_CREDIT_BUREAU_SUM) , y = cd1$TARGET, xlab = "OAMR_REQ_CREDIT_BUREAU_SUM", ylab = "TARGET", main = "Binned TARGET versus AMR_REQ_CREDIT_BUREAU_SUM")
+
+temp <- cd1[cd1$DAYS_EMPLOYED != 365243,]
+binnedplot(x=temp$DAYS_EMPLOYED , y = cd1$TARGET, xlab = "DAYS_EMPLOYED", ylab = "TARGET", 
+           main = "Binned TARGET versus DAYS_EMPLOYED")
+```
+
+
+
 
 ##Base Regression Model
 Here I constructed a base logsitic regression model without any transformation and interaction term. I also selected three complete datasets to see AUCs for the fitted models. The AUCs are fairly good at 0.6981, 0.6993 and 0.6986. 
@@ -188,6 +235,8 @@ roc(cd3$TARGET, fitted(reg_cd3), plot=T, legacy.axes=T)
 ```
 
 ##Model Diagnostics
+
+#######For continuous variables:
 I used binned plots to check residuals to check validity of model assumptions for continuous variables. Based on plots below, there's no major violation of model assumptions, except for *Binned residuals versus DAYS_EMPLOYED*. The plot is largely skewed by some points. Therefore, I plotted another residual plot to investigate if the other points form any pattern that might violate model assumptions.   
 ```{r, fig.width=5}
 par(mfrow = c(3,3))
@@ -280,14 +329,32 @@ anova(reg_cd1, reg_int, test = "Chisq")
 
 
 #Model Interpretation
+After examining all the possible pairs of variables that could have interaction effects; furthermore, there's no evidence suggests a logarithm or quadratic transformation on variables, therefore, the base model should be our ultimate model.
+
+Significant predictors:
+- CODE_GENDERM
+- NAME_CONTRACT_TYPERevolving loans
+- FLAG_OWN_CARY
+- DAYS_BIRTH 
+- DAYS_EMPLOYED
+- OCCUPATION_TYPEWaiters/barmen staff 
+- CNT_FAM_MEMBERS6
+- ORGANIZATION_TYPERealtor
+- ORGANIZATION_TYPEXNA
+- AMR_REQ_CREDIT_BUREAU_SUM8
+
 
 ```{r}
 summary(pool(reg))
 summary(pool(reg), conf.int=T)
 ```
 
-#Model Limitation
 
+##Model Limitation
+The limitation of this logistic regressino model includes the following:
+- I cannot do extrapolation for prediction that is our of the range that I use to form the logistic regression model.
+- The predictability of this model is relatively week as most p-values are quite large.
+- The predictability is subject to the choice of threshold.
 
 
 
