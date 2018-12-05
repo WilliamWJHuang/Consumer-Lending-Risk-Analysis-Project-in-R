@@ -48,8 +48,8 @@ library(dplyr)
 library(tidyverse)
 library(pROC)
 library(arm)
-setwd("/Users/wh132/Desktop")
-#setwd("/Users/Macintosh/Desktop")
+#setwd("/Users/wh132/Desktop")
+setwd("/Users/Macintosh/Desktop")
 application_data <- read.csv("application_train.csv")
 ```
 ```{r}
@@ -238,7 +238,7 @@ roc(cd3$TARGET, fitted(reg_cd3), plot=T, legacy.axes=T)
 
 #######For continuous variables:
 I used binned plots to check residuals to check validity of model assumptions for continuous variables. Based on plots below, there's no major violation of model assumptions, except for *Binned residuals versus DAYS_EMPLOYED*. The plot is largely skewed by some points. Therefore, I plotted another residual plot to investigate if the other points form any pattern that might violate model assumptions.   
-```{r, fig.width=5}
+```{r, fig.width=10}
 par(mfrow = c(3,3))
 #Dataset 1
 cd1 <- mice::complete(application_MI, 1)
@@ -268,7 +268,7 @@ binnedplot(x=temp$DAYS_EMPLOYED , y = rawresid1, xlab = "DAYS_EMPLOYED", ylab = 
 ```
 
 After I excluded the large value in the `DAYS_EMPLOYED` columns(`application_data_sam$DAYS_EMPLOYED == 365,243`), the residual plot suggests no major violation of model assumptions. For those large value outliers, as they are also valid input data, I have no scientific reason to remove them.
-```{r, fig.width=7}
+```{r, fig.width=10}
 par(mfrow = c(1,2))
 binnedplot(x=cd1$DAYS_EMPLOYED[cd1$DAYS_EMPLOYED != max(application_data_sam$DAYS_EMPLOYED)] , y = rawresid1[cd1$DAYS_EMPLOYED != max(application_data_sam$DAYS_EMPLOYED)], xlab = "DAYS_EMPLOYED", ylab = "Residuals", 
            main = "Binned residuals versus DAYS_EMPLOYED (without outliers)")
@@ -294,7 +294,7 @@ anova(reg_cd1, reg_int, test = "Chisq")
 
 - `NAME_EDUCATION_TYPE` versus `AMT_INCOME_TOTAL`
 The amount of income is typically associated with the highest education he or her received. Therefore, I try to see if there's any interaction effect between these two variables. The plots below suggest that there might be an interaction effect, though not very clear. But the F-test indicates that I should not add an interaction term between these two variables in the regression model.
-```{r}
+```{r, fig.width=7}
 bwplot(as.factor(TARGET)~AMT_INCOME_TOTAL|as.factor(NAME_EDUCATION_TYPE), data = cd1, ylab = "TARGET")
 ```
 ```{r}
