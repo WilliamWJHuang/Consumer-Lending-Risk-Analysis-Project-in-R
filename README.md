@@ -5,10 +5,11 @@ I identify six significant predictors based on my analysis.
 <br>
 Full pdf report: https://bit.ly/2VhfMLD
 <br>
+<br>
 **Data Source** <br>
 Data source: Home Credit Group, Kaggle
 <br>
-
+<br>
 **Exploratory Data Analysis** <br>
 ![EDA](https://github.com/WilliamWJHuang/Consumer-Lending-Risk-Analysis-Project-in-R/blob/master/Exploratory%20Data%20Analysis.png)
 
